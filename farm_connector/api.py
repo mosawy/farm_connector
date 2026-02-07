@@ -68,24 +68,83 @@ def get_assigned_forms():
 	# Build projects list
 	projects = [{'id': p, 'name': p} for p in projects_set]
 	
-	# Get farm locations for tile pre-download (if Farm DocType exists)
+	# Get farm locations for tile pre-download
 	farm_locations = []
-	if frappe.db.exists('DocType', 'Farm'):
-		try:
-			# Get farms with coordinates
-			farms = frappe.get_all(
-				'Farm',
-				filters={'owner': user} if frappe.db.has_column('Farm', 'owner') else {},
-				fields=['name', 'center_latitude as lat', 'center_longitude as lng'],
-				limit=100
-			)
-			farm_locations = [
-				{'id': f.get('name'), 'lat': f.get('lat'), 'lng': f.get('lng')}
-				for f in farms if f.get('lat') and f.get('lng')
-			]
-		except Exception:
-			# If fields don't exist, just return empty list
-			pass
+	
+	for assignment in assignments:
+		loc_data = {}
+		
+		# 1. Check Form Assignment 'location' (Primary)
+		if assignment.get('location'):
+			try:
+				# location field is likely a GeoJSON string or dict from Geolocation field
+				loc_val = assignment.get('location')
+				if isinstance(loc_val, str):
+					loc_val = json.loads(loc_val)
+				
+				# Extract coordinates from GeoJSON
+				if isinstance(loc_val, dict) and 'features' in loc_val:
+					# FeatureCollection
+					geometry = loc_val['features'][0]['geometry']
+				elif isinstance(loc_val, dict) and 'geometry' in loc_val:
+					# Feature
+					geometry = loc_val['geometry']
+				elif isinstance(loc_val, dict) and 'coordinates' in loc_val:
+					# Geometry
+					geometry = loc_val
+				else:
+					geometry = None
+					
+				if geometry and 'coordinates' in geometry:
+					coords = geometry['coordinates']
+					# Handle Point or Polygon
+					if geometry['type'] == 'Point':
+						loc_data = {'lat': coords[1], 'lng': coords[0]}
+					elif geometry['type'] == 'Polygon':
+						# Use first point of polygon as center/reference
+						loc_data = {'lat': coords[0][0][1], 'lng': coords[0][0][0]}
+			except Exception:
+				pass
+		
+		# 2. If no location in assignment, check the Target Document
+		if not loc_data:
+			try:
+				doctype = assignment.get('doctype_name')
+				name = assignment.get('name') # This is assignment name, need linked doc name??
+				# Wait, 'Form Assignment' usually doesn't store the linked doc name if it's new.
+				# But for existing forms (e.g. Visit), it might link to a Farm.
+				# The current code in 'assignments' has 'name' which is the assignment name.
+				# We don't have the linked document name in the assignment list unless we fetch it.
+				# Let's check api.py lines 27-44. It fetches 'name', 'doctype_name', 'project', 'location'.
+				# It does NOT fetch the linked document name.
+				# So we can effectively only check the Project as fallback if Assignment has no location.
+				pass
+			except Exception:
+				pass
+
+		# 3. Fallback to Project Location
+		if not loc_data and assignment.get('project'):
+			try:
+				project_name = assignment.get('project')
+				# Check if project has location fields
+				if frappe.db.exists('Project', project_name):
+					# Try generic fields
+					proj = frappe.db.get_value('Project', project_name, ['latitude', 'longitude', 'location'], as_dict=True)
+					if proj:
+						if proj.get('latitude') and proj.get('longitude'):
+							loc_data = {'lat': proj.get('latitude'), 'lng': proj.get('longitude')}
+			except Exception:
+				pass
+		
+		# Add if we found a location
+		if loc_data:
+			farm_locations.append({
+				'id': assignment.get('name'), # Use assignment Name as ID
+				'name': assignment.get('description') or assignment.get('doctype_name'),
+				'lat': loc_data['lat'],
+				'lng': loc_data['lng']
+			})
+
 	
 	return {
 		'forms': forms,
@@ -134,7 +193,7 @@ def get_doctype_fields(doctype):
 
 
 @frappe.whitelist()
-def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=500, doctype_name="Farm"):
+def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=500, doctype_name=None):
 	"""
 	Get nearby farm polygons for overlap detection
 	Returns GeoJSON FeatureCollection format
@@ -145,14 +204,26 @@ def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=
 		radius_km (float): Radius in kilometers (default 5km)
 		project_id (str): Optional project filter
 		limit (int): Maximum number of results (default 500)
-		doctype_name (str): DocType to query (default "Farm")
+		doctype_name (str): DocType to query
 	
 	Returns:
 		dict: GeoJSON FeatureCollection with polygon features
 	"""
+	# If no doctype specified, return empty result
+	if not doctype_name:
+		return {
+			"type": "FeatureCollection",
+			"features": []
+		}
+
 	# Check if DocType exists
 	if not frappe.db.exists("DocType", doctype_name):
-		frappe.throw(f"DocType '{doctype_name}' does not exist")
+		# Instead of throwing, just return empty features.
+		# This handles cases where an assignment exists for a deleted DocType.
+		return {
+			"type": "FeatureCollection",
+			"features": []
+		}
 	
 	# Build filters
 	filters = {}
@@ -168,13 +239,17 @@ def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=
 	fields = ['name']
 	
 	# Common field mappings (Frappe field -> PWA field)
+	# Prioritize 'polygon' as the primary field name for geometry
 	field_mapping = {
 		'farm_name': 'farm_name',
 		'title': 'farm_name',
 		'owner_name': 'owner_name',
 		'status': 'status',
+		'polygon': 'polygon_geojson',  # Primary polygon field (used by frontend app)
+		'location': 'polygon_geojson', # Standard Geolocation field
 		'polygon_geojson': 'polygon_geojson',
 		'geojson': 'polygon_geojson',
+		'geometry': 'polygon_geojson',  # Fallback for standard GeoJSON field
 		'area_hectares': 'area_hectares',
 		'area': 'area_hectares',
 		'center_latitude': 'center_latitude',
@@ -231,10 +306,22 @@ def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=
 			try:
 				# If it's a string, parse it
 				if isinstance(geojson_field, str):
-					geometry = json.loads(geojson_field)
+					geojson_obj = json.loads(geojson_field)
 				else:
-					geometry = geojson_field
-			except (json.JSONDecodeError, TypeError):
+					geojson_obj = geojson_field
+				
+				# Extract geometry if it's a Feature or FeatureCollection
+				if isinstance(geojson_obj, dict):
+					if geojson_obj.get('type') == 'FeatureCollection' and geojson_obj.get('features'):
+						# Use geometry of first feature
+						geometry = geojson_obj['features'][0]['geometry']
+					elif geojson_obj.get('type') == 'Feature':
+						geometry = geojson_obj.get('geometry')
+					else:
+						# Assume it's a geometry object or valid dict
+						geometry = geojson_obj
+						
+			except (json.JSONDecodeError, TypeError, IndexError):
 				# If parsing fails, skip this polygon
 				continue
 		
@@ -247,7 +334,9 @@ def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=
 				"owner_name": mapped_data.get('owner_name'),
 				"status": mapped_data.get('status', 'unverified'),
 				"area_hectares": mapped_data.get('area_hectares'),
-				"project": mapped_data.get('project')
+				"project": mapped_data.get('project'),
+				"center_lat": mapped_data.get('center_latitude'),
+				"center_lng": mapped_data.get('center_longitude')
 			},
 			"geometry": geometry
 		}
