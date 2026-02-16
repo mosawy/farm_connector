@@ -9,6 +9,7 @@
         "naming_series",
         "category",
         "template",
+        "form_assignment",
         "column_break_1",
         "section_break_1",
         "survey_html",
@@ -35,6 +36,13 @@
             "label": "Template",
             "options": "PGS Template",
             "reqd": 1
+        },
+        {
+            "fieldname": "form_assignment",
+            "fieldtype": "Link",
+            "label": "Form Assignment",
+            "options": "Form Assignment",
+            "read_only": 1
         },
         {
             "fieldname": "column_break_1",

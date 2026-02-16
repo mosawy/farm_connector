@@ -17,6 +17,7 @@ class PGSSurvey(Document):
 
 		amended_from: DF.Link | None
 		category: DF.Literal["", "Pre-Germination", "Post-Harvest", "Soil Analysis", "Crop Health", "General"]
+		form_assignment: DF.Link | None
 		items: DF.Table[PGSSurveyItem]
 		naming_series: DF.Literal["PGS-.YYYY.-.MM.-.DD.-.####"]
 		template: DF.Link

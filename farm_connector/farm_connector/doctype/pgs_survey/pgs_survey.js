@@ -3,7 +3,24 @@
 
 frappe.ui.form.on('PGS Survey', {
     refresh: function (frm) {
+        // Auto-trigger template loading if opened from Form Assignment with template pre-filled
+        if (frm.doc.template && frm.is_new() && (!frm.doc.items || frm.doc.items.length === 0)) {
+            frm.trigger('template');
+        }
         farm_connector.survey_form.render_survey_form(frm);
+    },
+
+    on_submit: function (frm) {
+        // Mark the linked Form Assignment as completed
+        if (frm.doc.form_assignment) {
+            frappe.call({
+                method: 'farm_connector.api.mark_assignment_completed',
+                args: { assignment_name: frm.doc.form_assignment },
+                callback: function () {
+                    frappe.show_alert({ message: __('Form Assignment marked as Completed'), indicator: 'green' });
+                }
+            });
+        }
     },
 
     category: function (frm) {

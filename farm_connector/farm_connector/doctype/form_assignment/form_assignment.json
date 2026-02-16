@@ -9,6 +9,7 @@
     "field_order": [
         "user",
         "doctype_name",
+        "pgs_template",
         "description",
         "column_break_4",
         "assigned_date",
@@ -43,6 +44,14 @@
             "fieldname": "description",
             "fieldtype": "Small Text",
             "label": "Description"
+        },
+        {
+            "depends_on": "eval:doc.doctype_name == 'PGS Survey'",
+            "fieldname": "pgs_template",
+            "fieldtype": "Link",
+            "label": "PGS Template",
+            "options": "PGS Template",
+            "mandatory_depends_on": "eval:doc.doctype_name == 'PGS Survey'"
         },
         {
             "fieldname": "column_break_4",

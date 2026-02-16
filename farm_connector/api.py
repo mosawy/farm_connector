@@ -9,7 +9,6 @@ import json
 
 @frappe.whitelist()
 def get_assigned_forms():
-	print("dsfjh")
 	"""
 	Get forms assigned to the current user
 	Returns forms, projects, and farm locations for offline caching
@@ -38,7 +37,8 @@ def get_assigned_forms():
 			'due_date',
 			'status',
 			'project',
-			'location'
+			'location',
+			'pgs_template'
 		],
 		order_by='assigned_date desc'
 	)
@@ -155,23 +155,31 @@ def get_assigned_forms():
 
 
 @frappe.whitelist()
-def get_doctype_fields(doctype):
+def get_doctype_fields(doctype, template=None):
 	"""
-	Get field metadata for a DocType
-	Similar to hrms.api.get_doctype_fields
-	
+	Get field metadata for a DocType.
+	For PGS Survey: if a template is specified, returns the dynamic template fields
+	formatted as standard Frappe field definitions so the mobile app renders them
+	without any client-side changes.
+
 	Args:
 		doctype (str): Name of the DocType
-	
+		template (str): Optional. PGS Template name (used when doctype is 'PGS Survey')
+
 	Returns:
 		list: List of field definitions
 	"""
 	# Check if user has permission to access this DocType
 	if not frappe.has_permission(doctype, "read"):
 		frappe.throw(f"No permission to access {doctype}", frappe.PermissionError)
-	
+
+	# --- PGS Survey: return dynamic template fields ---
+	if doctype == 'PGS Survey' and template:
+		return _get_pgs_template_fields(template)
+
+	# --- Standard DocType meta fields ---
 	meta = frappe.get_meta(doctype)
-	
+
 	fields = []
 	for field in meta.fields:
 		fields.append({
@@ -188,7 +196,105 @@ def get_doctype_fields(doctype):
 			'length': field.length,
 			'precision': field.precision
 		})
-	
+
+	return fields
+
+
+def _get_pgs_template_fields(template_name):
+	"""
+	Convert PGS Template items into standard Frappe field definitions
+	so the mobile app can render them like any other DocType form.
+	"""
+	if not frappe.db.exists('PGS Template', template_name):
+		frappe.throw(f"PGS Template '{template_name}' does not exist")
+
+	template = frappe.get_doc('PGS Template', template_name)
+
+	# Parse section order
+	section_order = []
+	try:
+		section_order = json.loads(template.section_order or '[]')
+	except Exception:
+		pass
+
+	# Group items by section
+	sections = {}
+	for item in template.items:
+		sec = item.section or 'General'
+		if sec not in sections:
+			sections[sec] = []
+		sections[sec].append(item)
+
+	# Build ordered list of sections
+	ordered_sections = []
+	for s in section_order:
+		if s in sections:
+			ordered_sections.append(s)
+	for s in sections:
+		if s not in ordered_sections:
+			ordered_sections.append(s)
+
+	# Map PGS field types to Frappe field types
+	type_map = {
+		'Data': 'Data',
+		'Int': 'Int',
+		'Float': 'Float',
+		'Small Text': 'Small Text',
+		'Long Text': 'Long Text',
+		'Select': 'Select',
+		'Radio': 'Select',  # Radio → Select for mobile compatibility
+		'Checkbox': 'Check',
+		'Multi-Select': 'Small Text',  # Multi-Select → Small Text with options in description
+		'Attachment': 'Attach',
+		'Formula': 'Data',  # Formula → read-only Data
+		'Section Break': 'Section Break',
+	}
+
+	fields = []
+
+	for section_name in ordered_sections:
+		# Insert a Section Break for each PGS section
+		fields.append({
+			'fieldname': f'section_{section_name.lower().replace(" ", "_")}',
+			'label': section_name,
+			'fieldtype': 'Section Break',
+			'options': None,
+			'reqd': 0,
+			'read_only': 0,
+			'hidden': 0,
+			'depends_on': None,
+			'description': None,
+			'default': None,
+			'length': 0,
+			'precision': None
+		})
+
+		for item in sections[section_name]:
+			frappe_type = type_map.get(item.field_type, 'Data')
+			fieldname = item.fieldname or item.field_label.lower().replace(' ', '_').replace('-', '_')
+
+			field_def = {
+				'fieldname': fieldname,
+				'label': item.field_label,
+				'fieldtype': frappe_type,
+				'options': item.options if item.field_type in ('Select', 'Radio', 'Multi-Select') else None,
+				'reqd': item.is_mandatory,
+				'read_only': 1 if item.field_type == 'Formula' else 0,
+				'hidden': 0,
+				'depends_on': item.display_depends_on or None,
+				'description': item.help_text or None,
+				'default': None,
+				'length': 0,
+				'precision': None,
+				# Extra PGS metadata (ignored by mobile if unknown, useful for form rendering)
+				'pgs_field_type': item.field_type,
+				'pgs_section': item.section,
+				'pgs_formula': item.formula or None,
+				'pgs_mandatory_depends_on': item.mandatory_depends_on or None,
+			}
+
+			fields.append(field_def)
+
 	return fields
 
 
@@ -388,3 +494,73 @@ def mark_assignment_completed(assignment_name):
 	doc.save(ignore_permissions=True)
 	
 	return {'status': 'success'}
+
+
+@frappe.whitelist()
+def submit_pgs_survey(template, values, assignment_name=None):
+	"""
+	Create and submit a PGS Survey from the mobile app.
+	Accepts field values keyed by fieldname, maps them to PGS Survey Items,
+	and submits the document.
+
+	Args:
+		template (str): PGS Template name
+		values (str|dict): JSON string or dict of {fieldname: value} pairs
+		assignment_name (str): Optional Form Assignment name to link
+
+	Returns:
+		dict: {status, survey_name}
+	"""
+	if isinstance(values, str):
+		values = json.loads(values)
+
+	if not frappe.db.exists('PGS Template', template):
+		frappe.throw(f"PGS Template '{template}' does not exist")
+
+	# Get template details
+	template_doc = frappe.get_doc('PGS Template', template)
+
+	# Create the PGS Survey
+	survey = frappe.new_doc('PGS Survey')
+	survey.template = template
+	survey.category = template_doc.category or ''
+
+	if assignment_name:
+		survey.form_assignment = assignment_name
+
+	# Populate items from template and fill in values
+	for item in template_doc.items:
+		fieldname = item.fieldname or item.field_label.lower().replace(' ', '_').replace('-', '_')
+
+		row = survey.append('items', {
+			'section': item.section,
+			'field_label': item.field_label,
+			'fieldname': item.fieldname,
+			'field_type': item.field_type,
+			'is_mandatory': item.is_mandatory,
+			'formula': item.formula,
+			'options': item.options,
+			'help_text': item.help_text,
+			'display_depends_on': item.display_depends_on,
+			'mandatory_depends_on': item.mandatory_depends_on,
+			'reading_value': str(values.get(fieldname, '')) if values.get(fieldname) is not None else '',
+		})
+
+	# Save first (triggers validation + formula calculation)
+	survey.save()
+
+	# Submit the survey
+	survey.submit()
+
+	# Mark assignment as completed if linked
+	if assignment_name and frappe.db.exists('Form Assignment', assignment_name):
+		assignment = frappe.get_doc('Form Assignment', assignment_name)
+		if assignment.user == frappe.session.user:
+			assignment.status = 'Completed'
+			assignment.completed_date = frappe.utils.today()
+			assignment.save(ignore_permissions=True)
+
+	return {
+		'status': 'success',
+		'survey_name': survey.name
+	}
