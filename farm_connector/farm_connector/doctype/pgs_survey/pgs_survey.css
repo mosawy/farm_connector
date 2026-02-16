@@ -1,0 +1,232 @@
+/* PGS Survey Form Styles */
+:root {
+    --sf-primary: #2490ef;
+    --sf-bg: #f4f5f7;
+    --sf-card-bg: #ffffff;
+    --sf-border: #d1d8dd;
+    --sf-text: #1f272e;
+    --sf-text-muted: #6c757d;
+    --sf-input-bg: #fcfcfc;
+    --sf-radius: 6px;
+    --sf-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.survey-form-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.survey-section {
+    background: var(--sf-card-bg);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius);
+    margin-bottom: 24px;
+    box-shadow: var(--sf-shadow);
+    overflow: hidden;
+    padding-bottom: 10px;
+}
+
+.section-title {
+    color: var(--sf-text);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--sf-border);
+    display: flex;
+    align-items: center;
+}
+
+.custom-section-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 20px;
+}
+
+.survey-field-wrapper {
+    grid-column: span 5;
+    /* Default to half width */
+    margin-bottom: 0;
+}
+
+.survey-field-wrapper.full-width {
+    grid-column: span 10;
+    /* Full width */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .survey-field-wrapper {
+        grid-column: span 10 !important;
+    }
+}
+
+.survey-field-wrapper .control-label {
+    display: block;
+    font-weight: 500;
+    color: var(--sf-text);
+    margin-bottom: 8px;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+}
+
+.survey-field-wrapper .control-value {
+    position: relative;
+}
+
+.survey-field-wrapper input.input-with-feedback,
+.survey-field-wrapper textarea.input-with-feedback,
+.survey-field-wrapper select.input-with-feedback {
+    width: 100%;
+    background-color: var(--sf-input-bg);
+    border: 1px solid var(--sf-border);
+    border-radius: 4px;
+    padding: 2px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--sf-text);
+    transition: all 0.2s ease;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.survey-field-wrapper input.input-with-feedback:focus,
+.survey-field-wrapper textarea.input-with-feedback:focus,
+.survey-field-wrapper select.input-with-feedback:focus {
+    border-color: var(--sf-primary);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(36, 144, 239, 0.15);
+    outline: none;
+}
+
+.survey-field-wrapper textarea.input-with-feedback {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Checkbox & Radio Styling */
+.survey-field-wrapper .checkbox,
+.survey-field-wrapper .radio {
+    margin: 8px 15px 8px 0;
+    display: inline-block;
+}
+
+.survey-field-wrapper .checkbox label,
+.survey-field-wrapper .radio label {
+    cursor: pointer;
+    color: var(--sf-text);
+    font-size: 14px;
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.survey-field-wrapper .checkbox input[type="checkbox"],
+.survey-field-wrapper .radio input[type="radio"] {
+    margin-right: 10px;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--sf-primary);
+}
+
+.survey-field-wrapper .help-box {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--sf-text-muted);
+    font-style: italic;
+}
+
+.survey-field-wrapper .reqd {
+    color: #e03e2f;
+    margin-left: 3px;
+    font-weight: bold;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--sf-text-muted);
+    font-size: 15px;
+    background: var(--sf-card-bg);
+    border-radius: var(--sf-radius);
+    border: 1px dashed var(--sf-border);
+}
+
+/* Read-only/Formula styling */
+.survey-field-wrapper input[readonly] {
+    background-color: #f1f3f5;
+    color: var(--sf-text-muted);
+    cursor: not-allowed;
+}
+
+/* HTML Field Content */
+.html-field-content {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+    font-size: 14px;
+    color: var(--sf-text);
+}
+
+/* Collapsible Section Styles */
+.collapsible-section {
+    margin-bottom: 15px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.collapsible-section-header {
+    padding: 10px 15px;
+    background-color: #f1f3f5;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--sf-text);
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    user-select: none;
+}
+
+.collapsible-section-header:hover {
+    background-color: #e9ecef;
+}
+
+.collapsible-section-header .fa {
+    margin-right: 10px;
+    font-size: 12px;
+    color: var(--sf-text-muted);
+    transition: transform 0.2s;
+}
+
+.collapsible-section.collapsed .collapsible-section-header {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+.collapsible-section.expanded .collapsible-section-header {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 1px solid var(--sf-border);
+}
+
+.collapsible-section-body {
+    display: block;
+}
+
+/* Implicit sections (no header) shouldn't look like cards inside cards */
+.collapsible-section.implicit-section {
+    margin-bottom: 0;
+    background: transparent;
+}
+
+/* Override custom-section-body padding when inside collapsible */
+.collapsible-section .custom-section-body {
+    padding: 20px 15px;
+}

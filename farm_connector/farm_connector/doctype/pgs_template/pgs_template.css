@@ -1,0 +1,137 @@
+/* PGS Template Builder Styles */
+.template-builder-container {
+    padding: 0;
+}
+
+.builder-toolbar {
+    background: white;
+    border: 1px solid #d1d8dd;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.builder-sections {
+    background: white;
+    border: 1px solid #d1d8dd;
+    min-height: 300px;
+}
+
+.builder-section {
+    border-bottom: 1px solid #d1d8dd;
+}
+
+.builder-section:last-child {
+    border-bottom: none;
+}
+
+.section-header {
+    background: #fafbfc;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #d1d8dd;
+}
+
+.section-title-input {
+    border: none;
+    background: transparent;
+    font-weight: 600;
+    font-size: 13px;
+    color: #36414c;
+    flex: 1;
+    padding: 4px 8px;
+}
+
+.section-title-input:focus {
+    outline: 1px solid #2490ef;
+    background: white;
+}
+
+.section-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.field-list {
+    padding: 10px 15px;
+}
+
+.field-item {
+    background: #f8f9fa;
+    border: 1px solid #d1d8dd;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    cursor: move;
+}
+
+.field-item:hover {
+    background: #e9ecef;
+}
+
+.field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.field-label {
+    font-weight: 500;
+    color: #36414c;
+    font-size: 13px;
+}
+
+.field-type-badge {
+    background: #2490ef;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+.field-details {
+    font-size: 12px;
+    color: #6c757d;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.empty-section {
+    padding: 40px;
+    text-align: center;
+    color: #8d99a6;
+    font-size: 13px;
+}
+
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+/* Builder Styles for Section Break */
+.field-section-break {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    border: 1px dashed #ccc;
+    background-color: #fafafa;
+    border-radius: 4px;
+}
+
+.section-break-header {
+    background-color: #eee !important;
+    padding: 8px 10px !important;
+}
+
+.section-break-header .field-label {
+    font-weight: bold;
+    color: #555;
+    font-size: 13px;
+}

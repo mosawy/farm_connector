@@ -1,0 +1,98 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "naming_series:",
+    "creation": "2026-02-16 12:00:00",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "naming_series",
+        "category",
+        "template",
+        "column_break_1",
+        "section_break_1",
+        "survey_html",
+        "items",
+        "amended_from"
+    ],
+    "fields": [
+        {
+            "fieldname": "naming_series",
+            "fieldtype": "Select",
+            "label": "Naming Series",
+            "options": "PGS-.YYYY.-.MM.-.DD.-.####"
+        },
+        {
+            "fieldname": "category",
+            "fieldtype": "Select",
+            "label": "Category",
+            "options": "\nPre-Germination\nPost-Harvest\nSoil Analysis\nCrop Health\nGeneral"
+        },
+        {
+            "fieldname": "template",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Template",
+            "options": "PGS Template",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "section_break_1",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "survey_html",
+            "fieldtype": "HTML",
+            "label": "Survey Form"
+        },
+        {
+            "fieldname": "items",
+            "fieldtype": "Table",
+            "hidden": 1,
+            "label": "Items",
+            "options": "PGS Survey Item"
+        },
+        {
+            "fieldname": "amended_from",
+            "fieldtype": "Link",
+            "label": "Amended From",
+            "no_copy": 1,
+            "options": "PGS Survey",
+            "print_hide": 1,
+            "read_only": 1,
+            "search_index": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "is_submittable": 1,
+    "links": [],
+    "modified": "2026-02-16 12:00:00",
+    "modified_by": "Administrator",
+    "module": "Farm Connector",
+    "name": "PGS Survey",
+    "naming_rule": "By \"Naming Series\" field",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}
