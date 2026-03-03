@@ -210,6 +210,9 @@ def _get_pgs_template_fields(template_name):
 
 	template = frappe.get_doc('PGS Template', template_name)
 
+	if template.docstatus != 1:
+		frappe.throw(f"PGS Template '{template_name}' is not submitted")
+
 	# Parse section order
 	section_order = []
 	try:
@@ -236,18 +239,54 @@ def _get_pgs_template_fields(template_name):
 
 	# Map PGS field types to Frappe field types
 	type_map = {
+		# Data/Numeric types
 		'Data': 'Data',
 		'Int': 'Int',
 		'Float': 'Float',
+		'Currency': 'Currency',
+		'Percent': 'Float',
+		'Phone': 'Data',
+		# Text types
 		'Small Text': 'Small Text',
 		'Long Text': 'Long Text',
+		'Text': 'Text',
+		'Text Editor': 'Text Editor',
+		'Markdown Editor': 'Markdown Editor',
+		'HTML Editor': 'Text Editor',
+		'Code': 'Code',
+		'JSON': 'Code',
+		# Selection types
 		'Select': 'Select',
-		'Radio': 'Select',  # Radio → Select for mobile compatibility
-		'Checkbox': 'Check',
-		'Multi-Select': 'Small Text',  # Multi-Select → Small Text with options in description
+		'Autocomplete': 'Autocomplete',
+		# Date/Time types
+		'Date': 'Date',
+		'Datetime': 'Datetime',
+		'Time': 'Time',
+		'Duration': 'Duration',
+		# Link types
+		'Link': 'Link',
+		'Dynamic Link': 'Dynamic Link',
+		# File/Media types
 		'Attachment': 'Attach',
-		'Formula': 'Data',  # Formula → read-only Data
+		'Attach Image': 'Attach Image',
+		'Signature': 'Signature',
+		# Special types
+		'Color': 'Color',
+		'Rating': 'Rating',
+		'Barcode': 'Data',
+		'Icon': 'Data',
+		'Password': 'Password',
+		'Geolocation': 'Geolocation',
+		'Read Only': 'Read Only',
+		# PGS-specific types
+		'Radio': 'Select',
+		'Checkbox': 'Check',
+		'Multi-Select': 'Small Text',
+		'Formula': 'Data',
+		# Layout types
 		'Section Break': 'Section Break',
+		'Column Break': 'Column Break',
+		'Tab Break': 'Tab Break',
 	}
 
 	fields = []
@@ -273,19 +312,27 @@ def _get_pgs_template_fields(template_name):
 			frappe_type = type_map.get(item.field_type, 'Data')
 			fieldname = item.fieldname or item.field_label.lower().replace(' ', '_').replace('-', '_')
 
+			# Determine options value based on field type
+			if item.field_type in ('Select', 'Radio', 'Multi-Select', 'Autocomplete'):
+				options_value = item.options
+			elif item.field_type in ('Link', 'Dynamic Link'):
+				options_value = item.link_doctype
+			else:
+				options_value = None
+
 			field_def = {
 				'fieldname': fieldname,
 				'label': item.field_label,
 				'fieldtype': frappe_type,
-				'options': item.options if item.field_type in ('Select', 'Radio', 'Multi-Select') else None,
+				'options': options_value,
 				'reqd': item.is_mandatory,
-				'read_only': 1 if item.field_type == 'Formula' else 0,
+				'read_only': 1 if item.field_type in ('Formula', 'Read Only') else 0,
 				'hidden': 0,
 				'depends_on': item.display_depends_on or None,
 				'description': item.help_text or None,
 				'default': None,
 				'length': 0,
-				'precision': None,
+				'precision': 2 if item.field_type in ('Currency', 'Percent') else None,
 				# Extra PGS metadata (ignored by mobile if unknown, useful for form rendering)
 				'pgs_field_type': item.field_type,
 				'pgs_section': item.section,
@@ -520,6 +567,9 @@ def submit_pgs_survey(template, values, assignment_name=None):
 	# Get template details
 	template_doc = frappe.get_doc('PGS Template', template)
 
+	if template_doc.docstatus != 1:
+		frappe.throw(f"PGS Template '{template}' is not submitted")
+
 	# Create the PGS Survey
 	survey = frappe.new_doc('PGS Survey')
 	survey.template = template
@@ -540,6 +590,7 @@ def submit_pgs_survey(template, values, assignment_name=None):
 			'is_mandatory': item.is_mandatory,
 			'formula': item.formula,
 			'options': item.options,
+			'link_doctype': item.link_doctype if item.field_type in ('Link', 'Dynamic Link') else None,
 			'help_text': item.help_text,
 			'display_depends_on': item.display_depends_on,
 			'mandatory_depends_on': item.mandatory_depends_on,

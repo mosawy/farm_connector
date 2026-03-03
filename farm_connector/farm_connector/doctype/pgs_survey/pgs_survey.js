@@ -2,6 +2,17 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('PGS Survey', {
+    setup: function (frm) {
+        // Only allow selecting submitted (approved) templates
+        frm.set_query('template', function () {
+            let filters = { docstatus: 1, is_active: 1 };
+            if (frm.doc.category) {
+                filters.category = frm.doc.category;
+            }
+            return { filters };
+        });
+    },
+
     refresh: function (frm) {
         // Auto-trigger template loading if opened from Form Assignment with template pre-filled
         if (frm.doc.template && frm.is_new() && (!frm.doc.items || frm.doc.items.length === 0)) {
@@ -21,17 +32,6 @@ frappe.ui.form.on('PGS Survey', {
                 }
             });
         }
-    },
-
-    category: function (frm) {
-        frm.set_query('template', function () {
-            return {
-                filters: {
-                    category: frm.doc.category,
-                    is_active: 1
-                }
-            }
-        })
     },
 
     template: function (frm) {

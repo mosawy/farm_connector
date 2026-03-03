@@ -12,6 +12,7 @@
         "is_mandatory",
         "column_break_1",
         "options",
+        "link_doctype",
         "formula",
         "allow_multiple",
         "help_text",
@@ -45,7 +46,7 @@
             "fieldtype": "Select",
             "in_list_view": 1,
             "label": "Field Type",
-            "options": "Checkbox\nData\nSmall Text\nLong Text\nMulti-Select\nAttachment\nFormula\nSelect\nInt\nFloat\nRadio\nSection Break",
+            "options": "Data\nInt\nFloat\nCurrency\nPercent\nPhone\nSmall Text\nLong Text\nText\nText Editor\nMarkdown Editor\nHTML Editor\nCode\nJSON\nSelect\nAutocomplete\nCheckbox\nRadio\nMulti-Select\nLink\nDynamic Link\nDate\nDatetime\nTime\nDuration\nAttachment\nAttach Image\nSignature\nColor\nRating\nBarcode\nIcon\nPassword\nGeolocation\nRead Only\nFormula\nSection Break\nColumn Break\nTab Break",
             "reqd": 1
         },
         {
@@ -59,10 +60,18 @@
             "fieldtype": "Column Break"
         },
         {
-            "depends_on": "eval:in_list(['Select', 'Multi-Select', 'Radio'], doc.field_type)",
+            "depends_on": "eval:in_list(['Select', 'Multi-Select', 'Radio', 'Autocomplete'], doc.field_type)",
             "fieldname": "options",
             "fieldtype": "Small Text",
             "label": "Options"
+        },
+        {
+            "depends_on": "eval:in_list(['Link', 'Dynamic Link'], doc.field_type)",
+            "description": "Select the DocType this field links to",
+            "fieldname": "link_doctype",
+            "fieldtype": "Link",
+            "label": "Link DocType",
+            "options": "DocType"
         },
         {
             "depends_on": "eval:doc.field_type == 'Formula'",

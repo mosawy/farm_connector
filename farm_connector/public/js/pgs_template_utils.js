@@ -109,6 +109,7 @@ farm_connector.template_builder = {
         let details = [];
 
         if (field.options) details.push(`Options: ${field.options.split('\n').length} items`);
+        if (field.link_doctype) details.push(`Links to: ${field.link_doctype}`);
         if (field.help_text) details.push(`Help: ${field.help_text.substring(0, 30)}...`);
         if (field.display_depends_on) details.push('Has display condition');
         if (field.mandatory_depends_on) details.push('Has mandatory condition');
@@ -117,12 +118,13 @@ farm_connector.template_builder = {
         let wrapper_class = 'field-item';
         let content_html = '';
 
-        if (field.field_type === 'Section Break') {
+        if (['Section Break', 'Column Break', 'Tab Break'].includes(field.field_type)) {
             wrapper_class += ' field-section-break';
+            let icon_map = {'Section Break': 'fa-minus', 'Column Break': 'fa-columns', 'Tab Break': 'fa-folder-o'};
             content_html = `
                 <div class="field-header section-break-header">
                     <div>
-                        <span class="field-label"><i class="fa fa-minus"></i> ${field.field_label} (Section Break)</span>
+                        <span class="field-label"><i class="fa ${icon_map[field.field_type]}"></i> ${field.field_label} (${field.field_type})</span>
                     </div>
                     <div>
                         <button class="btn btn-xs btn-default" data-action="edit-field" data-field-name="${field.name}">
@@ -401,7 +403,7 @@ farm_connector.template_builder = {
                 label: 'Field Type',
                 fieldname: 'field_type',
                 fieldtype: 'Select',
-                options: 'Data\nInt\nFloat\nSmall Text\nLong Text\nSelect\nRadio\nCheckbox\nMulti-Select\nAttachment\nFormula\nSection Break',
+                options: 'Data\nInt\nFloat\nCurrency\nPercent\nPhone\nSmall Text\nLong Text\nText\nText Editor\nMarkdown Editor\nHTML Editor\nCode\nJSON\nSelect\nAutocomplete\nCheckbox\nRadio\nMulti-Select\nLink\nDynamic Link\nDate\nDatetime\nTime\nDuration\nAttachment\nAttach Image\nSignature\nColor\nRating\nBarcode\nIcon\nPassword\nGeolocation\nRead Only\nFormula\nSection Break\nColumn Break\nTab Break',
                 reqd: 1,
                 default: field_data.field_type || 'Data'
             },
@@ -418,8 +420,17 @@ farm_connector.template_builder = {
                 label: 'Options (one per line)',
                 fieldname: 'options',
                 fieldtype: 'Small Text',
-                depends_on: 'eval:in_list(["Select", "Radio", "Multi-Select"], doc.field_type)',
+                depends_on: 'eval:in_list(["Select", "Radio", "Multi-Select", "Autocomplete"], doc.field_type)',
                 default: field_data.options
+            },
+            {
+                label: 'Link DocType',
+                fieldname: 'link_doctype',
+                fieldtype: 'Link',
+                options: 'DocType',
+                depends_on: 'eval:in_list(["Link", "Dynamic Link"], doc.field_type)',
+                default: field_data.link_doctype,
+                description: 'Select the DocType this field links to'
             },
             {
                 label: 'Formula',

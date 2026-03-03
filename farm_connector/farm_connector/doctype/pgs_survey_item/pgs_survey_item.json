@@ -16,6 +16,7 @@
         "formula",
         "attachment",
         "options",
+        "link_doctype",
         "help_text",
         "display_depends_on",
         "mandatory_depends_on",
@@ -85,6 +86,13 @@
             "fieldtype": "Small Text",
             "hidden": 1,
             "label": "Options",
+            "read_only": 1
+        },
+        {
+            "fieldname": "link_doctype",
+            "fieldtype": "Data",
+            "hidden": 1,
+            "label": "Link DocType",
             "read_only": 1
         },
         {

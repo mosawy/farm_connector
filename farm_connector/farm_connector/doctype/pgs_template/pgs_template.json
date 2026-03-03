@@ -15,7 +15,8 @@
         "template_builder_html",
         "section_break_woeu",
         "items",
-        "section_order"
+        "section_order",
+        "amended_from"
     ],
     "fields": [
         {
@@ -73,9 +74,20 @@
         {
             "fieldname": "section_break_woeu",
             "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "amended_from",
+            "fieldtype": "Link",
+            "label": "Amended From",
+            "no_copy": 1,
+            "options": "PGS Template",
+            "print_hide": 1,
+            "read_only": 1,
+            "search_index": 1
         }
     ],
     "index_web_pages_for_search": 1,
+    "is_submittable": 1,
     "links": [
         {
             "link_doctype": "PGS Survey",
@@ -90,6 +102,8 @@
     "owner": "Administrator",
     "permissions": [
         {
+            "amend": 1,
+            "cancel": 1,
             "create": 1,
             "delete": 1,
             "email": 1,
@@ -99,6 +113,7 @@
             "report": 1,
             "role": "System Manager",
             "share": 1,
+            "submit": 1,
             "write": 1
         }
     ],

@@ -230,3 +230,55 @@
 .collapsible-section .custom-section-body {
     padding: 20px 15px;
 }
+
+/* Input group (Currency, Percent) */
+.survey-field-wrapper .input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.survey-field-wrapper .input-group .input-group-addon {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: var(--sf-text-muted);
+    background: #f5f5f5;
+    border: 1px solid var(--sf-border);
+    padding: 2px 8px;
+}
+
+.survey-field-wrapper .input-group .form-control {
+    flex: 1;
+}
+
+/* Rating field */
+.survey-field-wrapper .rating-input {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+
+.survey-field-wrapper .rating-star {
+    transition: color 0.15s ease;
+}
+
+.survey-field-wrapper .rating-star:hover {
+    transform: scale(1.2);
+}
+
+/* Color field */
+.survey-field-wrapper input[type="color"] {
+    cursor: pointer;
+}
+
+/* Signature placeholder */
+.survey-field-wrapper .signature-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Attach Image preview */
+.survey-field-wrapper .attach-image-wrapper img {
+    border: 1px solid var(--sf-border);
+}

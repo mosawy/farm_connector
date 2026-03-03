@@ -45,8 +45,14 @@ farm_connector.survey_form = {
                 current_outer_section = row.section;
             }
 
-            // 2. Handle Section Break (Inner Collapsible Section)
-            if (row.field_type === 'Section Break') {
+            // 2. Handle layout breaks
+            if (row.field_type === 'Column Break') {
+                // Column Break: visual separator, skip rendering as a field
+                return;
+            }
+
+            // 3. Handle Section Break / Tab Break (Inner Collapsible Section)
+            if (row.field_type === 'Section Break' || row.field_type === 'Tab Break') {
                 // Close previous inner section if open
                 if (current_inner_section_open) {
                     html += `</div></div></div>`; // Close .custom-section-body, .collapsible-section-body, .collapsible-section
@@ -123,7 +129,7 @@ farm_connector.survey_form = {
         let common_attrs = `data-row-name="${row.name}" data-field-type="${row.field_type}"`;
 
         let wrapper_class = "frappe-control survey-field-wrapper";
-        if (['Long Text', 'HTML', 'Small Text', 'Table'].includes(row.field_type) || (row.options && row.options.length > 50)) {
+        if (['Long Text', 'HTML', 'Small Text', 'Text', 'Text Editor', 'Markdown Editor', 'HTML Editor', 'Code', 'JSON', 'Signature', 'Geolocation', 'Table'].includes(row.field_type) || (row.options && row.options.length > 50)) {
             wrapper_class += " full-width";
         }
 
@@ -217,6 +223,117 @@ farm_connector.survey_form = {
                 field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" readonly ${common_attrs} style="background-color: #f5f5f5;">`;
                 break;
 
+            case 'Currency':
+                field_html = `<div class="input-group">
+                    <span class="input-group-addon" style="background:#f5f5f5; border:1px solid #d1d8dd; padding:2px 8px;">$</span>
+                    <input type="number" step="0.01" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="0.00" ${common_attrs}>
+                </div>`;
+                break;
+
+            case 'Percent':
+                field_html = `<div class="input-group">
+                    <input type="number" step="0.01" min="0" max="100" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="0-100" ${common_attrs}>
+                    <span class="input-group-addon" style="background:#f5f5f5; border:1px solid #d1d8dd; padding:2px 8px;">%</span>
+                </div>`;
+                break;
+
+            case 'Phone':
+                field_html = `<input type="tel" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="Enter phone number" ${common_attrs}>`;
+                break;
+
+            case 'Date':
+                field_html = `<input type="date" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" ${common_attrs}>`;
+                break;
+
+            case 'Datetime':
+                field_html = `<input type="datetime-local" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" ${common_attrs}>`;
+                break;
+
+            case 'Time':
+                field_html = `<input type="time" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" ${common_attrs}>`;
+                break;
+
+            case 'Duration':
+                field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="e.g. 1h 30m or 01:30:00" ${common_attrs}>`;
+                break;
+
+            case 'Color':
+                field_html = `<div style="display:flex; gap:8px; align-items:center;">
+                    <input type="color" class="input-with-feedback color-picker-input" value="${value || '#000000'}" ${common_attrs} style="width:48px; height:36px; padding:2px; cursor:pointer; border:1px solid #d1d8dd; border-radius:4px;">
+                    <input type="text" class="input-with-feedback form-control color-text-input" value="${frappe.utils.escape_html(value)}" placeholder="#000000" data-row-name="${row.name}" style="flex:1;">
+                </div>`;
+                break;
+
+            case 'Rating':
+                let rating_val = parseInt(value) || 0;
+                let stars_html = '';
+                for (let i = 1; i <= 5; i++) {
+                    stars_html += `<span class="rating-star" data-value="${i}" data-row-name="${row.name}" style="cursor:pointer; font-size:24px; color:${i <= rating_val ? '#ffa00a' : '#d1d8dd'};">&#9733;</span>`;
+                }
+                field_html = `<div class="rating-input" ${common_attrs}>${stars_html}</div>
+                    <input type="hidden" class="input-with-feedback rating-hidden" value="${rating_val}" data-row-name="${row.name}">`;
+                break;
+
+            case 'Barcode':
+                field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="Enter or scan barcode" ${common_attrs}>`;
+                break;
+
+            case 'Icon':
+                field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="e.g. fa fa-home" ${common_attrs}>`;
+                break;
+
+            case 'Password':
+                field_html = `<input type="password" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="Enter password" ${common_attrs}>`;
+                break;
+
+            case 'Link':
+            case 'Dynamic Link':
+                field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" placeholder="Search ${frappe.utils.escape_html(row.link_doctype || row.options || '')}..." ${common_attrs}>`;
+                break;
+
+            case 'Autocomplete':
+                let ac_options = (row.options || "").split('\n').filter(o => o).map(o =>
+                    `<option value="${frappe.utils.escape_html(o)}">`
+                ).join('');
+                let list_id = 'datalist_' + row.name;
+                field_html = `<input type="text" class="input-with-feedback form-control" list="${list_id}" value="${frappe.utils.escape_html(value)}" placeholder="Type to search..." ${common_attrs}>
+                    <datalist id="${list_id}">${ac_options}</datalist>`;
+                break;
+
+            case 'Text':
+            case 'Text Editor':
+            case 'Markdown Editor':
+            case 'HTML Editor':
+                field_html = `<textarea class="input-with-feedback form-control" rows="6" placeholder="Enter content" ${common_attrs}>${frappe.utils.escape_html(value)}</textarea>`;
+                break;
+
+            case 'Code':
+            case 'JSON':
+                field_html = `<textarea class="input-with-feedback form-control" rows="8" placeholder="Enter code" ${common_attrs} style="font-family:monospace; font-size:13px;">${frappe.utils.escape_html(value)}</textarea>`;
+                break;
+
+            case 'Attach Image':
+                field_html = `<div class="attach-image-wrapper">
+                    ${value ? `<img src="${frappe.utils.escape_html(value)}" style="max-width:200px; max-height:150px; border-radius:4px; margin-bottom:8px; display:block;">` : ''}
+                    <input type="file" accept="image/*" class="input-with-feedback form-control file-input" ${common_attrs}>
+                </div>`;
+                break;
+
+            case 'Signature':
+                field_html = `<div class="signature-wrapper" style="border:1px solid #d1d8dd; border-radius:4px; min-height:150px; background:#fafafa; text-align:center; padding:20px;">
+                    <p class="text-muted">Signature capture available in mobile app</p>
+                    <input type="hidden" class="input-with-feedback" value="${frappe.utils.escape_html(value)}" ${common_attrs}>
+                </div>`;
+                break;
+
+            case 'Geolocation':
+                field_html = `<textarea class="input-with-feedback form-control" rows="3" placeholder='{"type":"FeatureCollection","features":[]}' ${common_attrs} style="font-family:monospace; font-size:12px;">${frappe.utils.escape_html(value)}</textarea>`;
+                break;
+
+            case 'Read Only':
+                field_html = `<input type="text" class="input-with-feedback form-control" value="${frappe.utils.escape_html(value)}" readonly ${common_attrs} style="background-color: #f5f5f5;">`;
+                break;
+
             case 'HTML':
                 field_html = `<div class="html-field-content">${row.options || ''}</div>`;
                 break;
@@ -267,6 +384,40 @@ farm_connector.survey_form = {
             });
             farm_connector.survey_form.update_row_value(frm, row_name, values.join(', '));
         });
+
+        // Rating stars
+        wrapper.find('.rating-star').on('click', function () {
+            let row_name = $(this).data('row-name');
+            let value = $(this).data('value');
+            $(this).parent().find('.rating-star').each(function () {
+                $(this).css('color', $(this).data('value') <= value ? '#ffa00a' : '#d1d8dd');
+            });
+            wrapper.find(`.rating-hidden[data-row-name="${row_name}"]`).val(value);
+            farm_connector.survey_form.update_row_value(frm, row_name, value);
+        });
+
+        // Color picker sync
+        wrapper.find('.color-picker-input').on('input', function () {
+            let row_name = $(this).data('row-name');
+            let value = $(this).val();
+            $(this).siblings('.color-text-input').val(value);
+            farm_connector.survey_form.update_row_value(frm, row_name, value);
+        });
+        wrapper.find('.color-text-input').on('change', function () {
+            let row_name = $(this).data('row-name');
+            let value = $(this).val();
+            $(this).siblings('.color-picker-input').val(value);
+            farm_connector.survey_form.update_row_value(frm, row_name, value);
+        });
+
+        // File/Attach Image inputs
+        wrapper.find('.file-input').on('change', function () {
+            let row_name = $(this).data('row-name');
+            let file = this.files[0];
+            if (file) {
+                farm_connector.survey_form.update_row_value(frm, row_name, file.name);
+            }
+        });
     },
 
     bind_collapsible_events: function (wrapper) {
@@ -302,7 +453,7 @@ farm_connector.survey_form = {
 
             // Try to convert to number
             try {
-                if (item.field_type === 'Int' || item.field_type === 'Float') {
+                if (['Int', 'Float', 'Currency', 'Percent', 'Rating'].includes(item.field_type)) {
                     val = parseFloat(val) || val;
                 }
             } catch (e) { }
