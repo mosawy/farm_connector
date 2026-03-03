@@ -345,6 +345,121 @@ def _get_pgs_template_fields(template_name):
 	return fields
 
 
+def _get_nearby_polygons_from_pgs(lat=None, lng=None, radius_km=5, limit=500):
+	"""
+	Extract GeoJSON features from PGS Survey Items that have field_type 'Geolocation'.
+	Returns the same FeatureCollection format as get_nearby_polygons.
+	"""
+	# Get all Geolocation items from submitted surveys
+	geo_items = frappe.get_all(
+		'PGS Survey Item',
+		filters={'field_type': 'Geolocation', 'reading_value': ['is', 'set']},
+		fields=['parent', 'field_label', 'reading_value'],
+		limit=limit
+	)
+
+	# Only keep items from submitted surveys
+	if geo_items:
+		submitted_surveys = set(frappe.get_all(
+			'PGS Survey',
+			filters={'name': ['in', list({item.parent for item in geo_items})], 'docstatus': 1},
+			pluck='name'
+		))
+	else:
+		submitted_surveys = set()
+
+	features = []
+	for item in geo_items:
+		if item.parent not in submitted_surveys:
+			continue
+
+		try:
+			geojson_obj = json.loads(item.reading_value) if isinstance(item.reading_value, str) else item.reading_value
+		except (json.JSONDecodeError, TypeError):
+			continue
+
+		if not isinstance(geojson_obj, dict):
+			continue
+
+		# Extract geometry
+		geometry = None
+		if geojson_obj.get('type') == 'FeatureCollection' and geojson_obj.get('features'):
+			geometry = geojson_obj['features'][0].get('geometry')
+		elif geojson_obj.get('type') == 'Feature':
+			geometry = geojson_obj.get('geometry')
+		else:
+			geometry = geojson_obj
+
+		if not geometry:
+			continue
+
+		# Try to extract center point for bounding-box filtering
+		center_lat, center_lng = _extract_center_from_geometry(geometry)
+
+		if lat and lng and center_lat is not None and center_lng is not None:
+			lat_delta = float(radius_km) / 111
+			cos_lat = abs(float(lat)) * 0.017453
+			lng_delta = float(radius_km) / (111 * cos_lat) if cos_lat else float(radius_km) / 111
+
+			if not (float(lat) - lat_delta <= center_lat <= float(lat) + lat_delta and
+					float(lng) - lng_delta <= center_lng <= float(lng) + lng_delta):
+				continue
+
+		feature = {
+			"type": "Feature",
+			"id": item.parent,
+			"properties": {
+				"name": item.parent,
+				"owner_name": None,
+				"status": "submitted",
+				"area_hectares": None,
+				"project": None,
+				"center_lat": center_lat,
+				"center_lng": center_lng,
+				"field_label": item.field_label
+			},
+			"geometry": geometry
+		}
+		features.append(feature)
+
+	return {"type": "FeatureCollection", "features": features}
+
+
+def _extract_center_from_geometry(geometry):
+	"""Extract an approximate center point from a GeoJSON geometry."""
+	try:
+		geo_type = geometry.get('type', '')
+		coords = geometry.get('coordinates')
+		if not coords:
+			return None, None
+
+		if geo_type == 'Point':
+			return coords[1], coords[0]  # GeoJSON is [lng, lat]
+
+		# For Polygon, LineString, etc. — average all coordinate points
+		flat_coords = []
+		_flatten_coords(coords, flat_coords)
+		if not flat_coords:
+			return None, None
+
+		avg_lng = sum(c[0] for c in flat_coords) / len(flat_coords)
+		avg_lat = sum(c[1] for c in flat_coords) / len(flat_coords)
+		return avg_lat, avg_lng
+	except (IndexError, TypeError, KeyError):
+		return None, None
+
+
+def _flatten_coords(coords, result):
+	"""Recursively flatten nested coordinate arrays into [lng, lat] pairs."""
+	if not coords:
+		return
+	if isinstance(coords[0], (int, float)):
+		result.append(coords)
+	else:
+		for item in coords:
+			_flatten_coords(item, result)
+
+
 @frappe.whitelist()
 def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=500, doctype_name=None):
 	"""
@@ -378,12 +493,16 @@ def get_nearby_polygons(lat=None, lng=None, radius_km=5, project_id=None, limit=
 			"features": []
 		}
 	
+	# Handle PGS Survey: geolocation is stored in child table items
+	if doctype_name == 'PGS Survey':
+		return _get_nearby_polygons_from_pgs(lat, lng, radius_km, limit)
+
 	# Build filters
 	filters = {}
-	
+
 	if project_id:
 		filters['project'] = project_id
-	
+
 	# Get meta to check which fields exist
 	meta = frappe.get_meta(doctype_name)
 	field_names = [f.fieldname for f in meta.fields]
